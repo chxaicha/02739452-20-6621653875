@@ -1,0 +1,27 @@
+services:
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: book_postgres
+
+    environment:
+      POSTGRES_USER: bookuser
+      POSTGRES_PASSWORD: bookpass
+      POSTGRES_DB: bookdb
+
+    ports:
+      - "5542:5432"
+
+    volumes:
+      - book_postgres_data:/var/lib/postgresql/data
+      - ./sql/init.sql:/docker-entrypoint-initdb.d/init.sql
+
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U bookuser -d bookdb"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+
+volumes:
+  book_postgres_data:

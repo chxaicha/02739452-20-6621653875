@@ -1,0 +1,625 @@
+<!DOCTYPE html>
+<html lang="th">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1.0">
+
+    <title>Book Data Analysis Dashboard</title>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <style>
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background: #f4f6f9;
+            color: #222;
+        }
+
+        .header {
+            background: #1f2937;
+            color: white;
+            padding: 25px 40px;
+        }
+
+        .header h1 {
+            margin: 0;
+            font-size: 28px;
+        }
+
+        .header p {
+            margin: 8px 0 0;
+            color: #d1d5db;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 30px auto;
+            padding: 0 20px;
+        }
+
+        .kpi-grid {
+            display: grid;
+            grid-template-columns:
+                repeat(4, 1fr);
+            gap: 20px;
+            margin-bottom: 25px;
+        }
+
+        .kpi {
+            background: white;
+            border-radius: 12px;
+            padding: 25px;
+            box-shadow:
+                0 2px 8px rgba(0,0,0,0.08);
+        }
+
+        .kpi-title {
+            color: #6b7280;
+            font-size: 14px;
+        }
+
+        .kpi-value {
+            margin-top: 8px;
+            font-size: 30px;
+            font-weight: bold;
+        }
+
+        .filters {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 25px;
+            box-shadow:
+                0 2px 8px rgba(0,0,0,0.08);
+        }
+
+        .filters h2 {
+            margin-top: 0;
+        }
+
+        .filter-row {
+            display: grid;
+            grid-template-columns:
+                repeat(4, 1fr);
+            gap: 15px;
+        }
+
+        label {
+            display: block;
+            font-size: 13px;
+            margin-bottom: 6px;
+            color: #555;
+        }
+
+        select,
+        input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 7px;
+        }
+
+        button {
+            margin-top: 20px;
+            padding: 11px 25px;
+            border: none;
+            border-radius: 7px;
+            background: #2563eb;
+            color: white;
+            cursor: pointer;
+            font-size: 15px;
+        }
+
+        .reset {
+            background: #6b7280;
+            margin-left: 8px;
+        }
+
+        .chart-grid {
+            display: grid;
+            grid-template-columns:
+                repeat(2, 1fr);
+            gap: 20px;
+            margin-bottom: 25px;
+        }
+
+        .chart-card {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow:
+                0 2px 8px rgba(0,0,0,0.08);
+        }
+
+        .chart-card h2 {
+            margin-top: 0;
+            font-size: 18px;
+        }
+
+        .chart-container {
+            height: 320px;
+        }
+
+        .table-card {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow:
+                0 2px 8px rgba(0,0,0,0.08);
+        }
+
+        .table-wrapper {
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th,
+        td {
+            padding: 12px;
+            border-bottom: 1px solid #eee;
+            text-align: left;
+        }
+
+        th {
+            background: #f9fafb;
+        }
+
+        .source {
+            font-size: 12px;
+            padding: 5px 8px;
+            border-radius: 5px;
+            background: #e5e7eb;
+        }
+
+        @media (max-width: 900px) {
+
+            .kpi-grid,
+            .filter-row,
+            .chart-grid {
+                grid-template-columns: 1fr;
+            }
+
+        }
+
+    </style>
+
+</head>
+
+<body>
+
+<div class="header">
+
+    <h1>📚 Book Data Analysis Dashboard</h1>
+
+    <p>
+        ระบบรวบรวมและวิเคราะห์ข้อมูลหนังสือจากหลายแหล่งข้อมูล
+    </p>
+
+</div>
+
+
+<div class="container">
+
+
+    <!-- KPI -->
+
+    <div class="kpi-grid">
+
+        <div class="kpi">
+
+            <div class="kpi-title">
+                จำนวนหนังสือ
+            </div>
+
+            <div class="kpi-value">
+                {{ total_books }}
+            </div>
+
+        </div>
+
+
+        <div class="kpi">
+
+            <div class="kpi-title">
+                ราคาเฉลี่ย
+            </div>
+
+            <div class="kpi-value">
+                £{{ "%.2f"|format(avg_price) }}
+            </div>
+
+        </div>
+
+
+        <div class="kpi">
+
+            <div class="kpi-title">
+                คะแนนเฉลี่ย
+            </div>
+
+            <div class="kpi-value">
+                {{ avg_rating }}
+            </div>
+
+        </div>
+
+
+        <div class="kpi">
+
+            <div class="kpi-title">
+                จำนวนแหล่งข้อมูล
+            </div>
+
+            <div class="kpi-value">
+                {{ total_sources }}
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <!-- Filters -->
+
+    <div class="filters">
+
+        <h2>🔎 ตัวกรองข้อมูล</h2>
+
+        <form method="GET">
+
+            <div class="filter-row">
+
+                <div>
+
+                    <label>Source</label>
+
+                    <select name="source">
+
+                        <option value="">
+                            ทั้งหมด
+                        </option>
+
+                        {% for item in sources %}
+
+                        <option
+                            value="{{ item }}"
+                            {% if selected_source == item %}
+                            selected
+                            {% endif %}
+                        >
+                            {{ item }}
+                        </option>
+
+                        {% endfor %}
+
+                    </select>
+
+                </div>
+
+
+                <div>
+
+                    <label>Category</label>
+
+                    <select name="category">
+
+                        <option value="">
+                            ทั้งหมด
+                        </option>
+
+                        {% for item in categories %}
+
+                        <option
+                            value="{{ item }}"
+                            {% if selected_category == item %}
+                            selected
+                            {% endif %}
+                        >
+                            {{ item }}
+                        </option>
+
+                        {% endfor %}
+
+                    </select>
+
+                </div>
+
+
+                <div>
+
+                    <label>
+                        คะแนนขั้นต่ำ
+                    </label>
+
+                    <input
+                        type="number"
+                        name="min_rating"
+                        min="1"
+                        max="5"
+                        value="{{ selected_rating }}"
+                        placeholder="เช่น 4"
+                    >
+
+                </div>
+
+
+                <div>
+
+                    <label>
+                        ราคาสูงสุด
+                    </label>
+
+                    <input
+                        type="number"
+                        name="max_price"
+                        step="0.01"
+                        value="{{ selected_price }}"
+                        placeholder="เช่น 30"
+                    >
+
+                </div>
+
+            </div>
+
+
+            <button type="submit">
+                🔍 ค้นหา
+            </button>
+
+            <a href="/">
+                <button
+                    type="button"
+                    class="reset">
+                    รีเซ็ต
+                </button>
+            </a>
+
+        </form>
+
+    </div>
+
+
+    <!-- Charts -->
+
+    <div class="chart-grid">
+
+
+        <div class="chart-card">
+
+            <h2>
+                📊 จำนวนหนังสือแยกตาม Source
+            </h2>
+
+            <div class="chart-container">
+
+                <canvas id="sourceChart"></canvas>
+
+            </div>
+
+        </div>
+
+
+        <div class="chart-card">
+
+            <h2>
+                ⭐ การกระจายคะแนนรีวิว
+            </h2>
+
+            <div class="chart-container">
+
+                <canvas id="ratingChart"></canvas>
+
+            </div>
+
+        </div>
+
+
+        <div class="chart-card">
+
+            <h2>
+                📚 หนังสือแยกตามหมวดหมู่
+            </h2>
+
+            <div class="chart-container">
+
+                <canvas id="categoryChart"></canvas>
+
+            </div>
+
+        </div>
+
+
+    </div>
+
+
+    <!-- Table -->
+
+    <div class="table-card">
+
+        <h2>
+            📖 รายการหนังสือ
+        </h2>
+
+        <div class="table-wrapper">
+
+            <table>
+
+                <thead>
+
+                    <tr>
+
+                        <th>ชื่อหนังสือ</th>
+
+                        <th>ผู้เขียน</th>
+
+                        <th>ปี</th>
+
+                        <th>ราคา</th>
+
+                        <th>Rating</th>
+
+                        <th>Category</th>
+
+                        <th>Source</th>
+
+                    </tr>
+
+                </thead>
+
+
+                <tbody>
+
+                {% for book in books %}
+
+                    <tr>
+
+                        <td>
+                            {{ book[0] }}
+                        </td>
+
+                        <td>
+                            {{ book[1] or "-" }}
+                        </td>
+
+                        <td>
+                            {{ book[2] or "-" }}
+                        </td>
+
+                        <td>
+                            {% if book[3] is not none %}
+                                £{{ "%.2f"|format(book[3]) }}
+                            {% else %}
+                                -
+                            {% endif %}
+                        </td>
+
+                        <td>
+                            {{ book[4] or "-" }}
+                        </td>
+
+                        <td>
+                            {{ book[5] or "-" }}
+                        </td>
+
+                        <td>
+                            <span class="source">
+                                {{ book[6] }}
+                            </span>
+                        </td>
+
+                    </tr>
+
+                {% endfor %}
+
+                </tbody>
+
+            </table>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+<script>
+
+    // Source Chart
+
+    new Chart(
+        document.getElementById("sourceChart"),
+        {
+            type: "bar",
+
+            data: {
+                labels:
+                    {{ source_labels | tojson }},
+
+                datasets: [{
+                    label: "จำนวนหนังสือ",
+
+                    data:
+                        {{ source_values | tojson }}
+                }]
+            },
+
+            options: {
+                responsive: true,
+                maintainAspectRatio: false
+            }
+        }
+    );
+
+
+    // Rating Chart
+
+    new Chart(
+        document.getElementById("ratingChart"),
+        {
+            type: "bar",
+
+            data: {
+                labels:
+                    {{ rating_labels | tojson }},
+
+                datasets: [{
+                    label: "จำนวนหนังสือ",
+
+                    data:
+                        {{ rating_values | tojson }}
+                }]
+            },
+
+            options: {
+                responsive: true,
+                maintainAspectRatio: false
+            }
+        }
+    );
+
+
+    // Category Chart
+
+    new Chart(
+        document.getElementById("categoryChart"),
+        {
+            type: "doughnut",
+
+            data: {
+                labels:
+                    {{ category_labels | tojson }},
+
+                datasets: [{
+                    label: "จำนวนหนังสือ",
+
+                    data:
+                        {{ category_values | tojson }}
+                }]
+            },
+
+            options: {
+                responsive: true,
+                maintainAspectRatio: false
+            }
+        }
+    );
+
+</script>
+
+</body>
+
+</html>

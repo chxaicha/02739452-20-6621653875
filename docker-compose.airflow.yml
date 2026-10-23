@@ -1,0 +1,96 @@
+services:
+
+  airflow-init:
+    image: apache/airflow:2.10.4-python3.12
+    container_name: book_airflow_init
+
+    environment:
+      AIRFLOW__CORE__EXECUTOR: SequentialExecutor
+      AIRFLOW__CORE__LOAD_EXAMPLES: "false"
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://bookuser:bookpass@host.docker.internal:5542/airflowdb
+
+      _PIP_ADDITIONAL_REQUIREMENTS: >
+        requests
+        beautifulsoup4
+        pandas
+        psycopg2-binary
+
+    volumes:
+      - ./airflow/dags:/opt/airflow/dags
+      - ./airflow/logs:/opt/airflow/logs
+      - ./airflow/plugins:/opt/airflow/plugins
+      - ./airflow/config:/opt/airflow/config
+
+    command:
+      - bash
+      - -c
+      - |
+        airflow db migrate
+        airflow users create \
+          --username admin \
+          --password admin \
+          --firstname Admin \
+          --lastname User \
+          --role Admin \
+          --email admin@example.com || true
+
+
+  airflow-webserver:
+    image: apache/airflow:2.10.4-python3.12
+    container_name: book_airflow_webserver
+
+    depends_on:
+      airflow-init:
+        condition: service_completed_successfully
+
+    environment:
+      AIRFLOW__CORE__EXECUTOR: SequentialExecutor
+      AIRFLOW__CORE__LOAD_EXAMPLES: "false"
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://bookuser:bookpass@host.docker.internal:5542/airflowdb
+
+      _PIP_ADDITIONAL_REQUIREMENTS: >
+        requests
+        beautifulsoup4
+        pandas
+        psycopg2-binary
+
+    ports:
+      - "8080:8080"
+
+    volumes:
+      - ./airflow/dags:/opt/airflow/dags
+      - ./airflow/logs:/opt/airflow/logs
+      - ./airflow/plugins:/opt/airflow/plugins
+      - ./airflow/config:/opt/airflow/config
+
+    command:
+      - webserver
+
+
+  airflow-scheduler:
+    image: apache/airflow:2.10.4-python3.12
+    container_name: book_airflow_scheduler
+
+    depends_on:
+      airflow-init:
+        condition: service_completed_successfully
+
+    environment:
+      AIRFLOW__CORE__EXECUTOR: SequentialExecutor
+      AIRFLOW__CORE__LOAD_EXAMPLES: "false"
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://bookuser:bookpass@host.docker.internal:5542/airflowdb
+
+      _PIP_ADDITIONAL_REQUIREMENTS: >
+        requests
+        beautifulsoup4
+        pandas
+        psycopg2-binary
+
+    volumes:
+      - ./airflow/dags:/opt/airflow/dags
+      - ./airflow/logs:/opt/airflow/logs
+      - ./airflow/plugins:/opt/airflow/plugins
+      - ./airflow/config:/opt/airflow/config
+
+    command:
+      - scheduler
